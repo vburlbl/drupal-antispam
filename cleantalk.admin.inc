@@ -18,9 +18,9 @@ function cleantalk_settings_form($form, &$form_state) {
   $form['cleantalk_authkey'] = array(
     '#type' => 'textfield',
     '#title' => t('Access key'),
-    '#size' => 10,
-    '#maxlength' => 10,
-    '#default_value' => $ct_authkey ? $ct_authkey : 'enter key',
+    '#size' => 20,
+    '#maxlength' => 20,
+    '#default_value' => $ct_authkey ? $ct_authkey : '',
     '#description' => t(
       'Click <a target="_blank" href="!ct_link">here</a> to get access key.',
       array(
@@ -43,7 +43,10 @@ function cleantalk_settings_form($form, &$form_state) {
     '#type' => 'checkbox',
     '#title' => t('Enable automoderation'),
     '#default_value' => $ct_automod,
-    '#description' => t('Automatically publish good messages and put bad ones to admin approvement.<br /><span class="admin-enabled">Note: It overrides "Skip comment approval" permissions.</span>'),
+    '#description' => t('Automatically publish good messages and put bad ones to admin approvement.') .
+    '<br /><span class="admin-enabled">' .
+    t('Note: It overrides "Skip comment approval" permissions') .
+    '</span>',
   );
 
   return system_settings_form($form);

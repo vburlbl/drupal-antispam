@@ -10,12 +10,14 @@
  */
 function cleantalk_schema() {
   $schema['cleantalk_timelabels'] = array(
+    'description' => 'Timelabels for admin notification sending.',
     'fields' => array(
       'ct_key' => array(
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
+        'description' => 'Notification ID.',
       ),
       'ct_value' => array(
         'type' => 'int',
@@ -23,11 +25,13 @@ function cleantalk_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
+        'description' => 'Time of last notification.',
       ),
     ),
     'primary key' => array('ct_key'),
   );
   $schema['cleantalk_cids'] = array(
+    'description' => 'Comment checking results - CIDs and server responces.',
     'fields' => array(
       'cid' => array(
         'type' => 'int',
@@ -35,23 +39,27 @@ function cleantalk_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
+        'description' => 'ID of checked comment.',
       ),
       'ct_request_id' => array(
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
+        'description' => 'CleanTalk request ID for comment.',
       ),
       'ct_result_comment' => array(
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
+        'description' => 'CleanTalk result for comment.',
       ),
     ),
     'primary key' => array('cid'),
   );
   $schema['cleantalk_uids'] = array(
+    'description' => 'New user checking results - UIDs and server responces.',
     'fields' => array(
       'uid' => array(
         'type' => 'int',
@@ -59,51 +67,24 @@ function cleantalk_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
+        'description' => 'ID of checked user registration.',
       ),
       'ct_request_id' => array(
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
+        'description' => 'CleanTalk request ID for user registration.',
       ),
       'ct_result_comment' => array(
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
+        'description' => 'CleanTalk result for user registration.',
       ),
     ),
     'primary key' => array('uid'),
-  );
-  $schema['cleantalk_server'] = array(
-    'fields' => array(
-      'work_url' => array(
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'server_url' => array(
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'server_ttl' => array(
-        'type' => 'int',
-        'length' => 12,
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'server_changed' => array(
-        'type' => 'int',
-        'length' => 12,
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-    ),
   );
   return $schema;
 }
@@ -115,6 +96,10 @@ function cleantalk_uninstall() {
   variable_del('cleantalk_automod');
   variable_del('cleantalk_comments');
   variable_del('cleantalk_authkey');
+  variable_get('cleantalk_work_url');
+  variable_get('cleantalk_server_url');
+  variable_get('cleantalk_server_ttl');
+  variable_get('cleantalk_server_changed');
 }
 
 /**
@@ -125,42 +110,35 @@ function cleantalk_requirements($phase) {
   // Ensure translations don't break at install time.
   $t = get_t();
 
-  drupal_load('module', 'libraries');
-  $path = libraries_get_path('cleantalk');
+  $my_module = 'cleantalk';
   $title = 'CleanTalk PHP-antispam classes';
+
+  drupal_load('module', 'libraries');
+  $path = libraries_get_path($my_module);
+
   if (
     !$path ||
-    !file_exists(DRUPAL_ROOT . '/' . $path . '/JSON.php') ||
-    !file_exists(DRUPAL_ROOT . '/' . $path . '/cleantalk.class.php')
+    !file_exists(DRUPAL_ROOT . '/' . $path . '/cleantalk.class.php') ||
+    !file_exists(DRUPAL_ROOT . '/' . $path . '/JSON.php')
   ) {
     // Since Libraries 2.x, $path is FALSE if the library does not exist.
     $path = 'sites/all/libraries/cleantalk';
-    $requirements['cleantalk'] = array(
-      'title' => $t($title),
+    $requirements[$my_module] = array(
+      'title' => $t('CleanTalk PHP-antispam classes'),
       'value' => $t('Missing'),
       'severity' => REQUIREMENT_ERROR,
       'description' => $phase == 'runtime' ? _cleantalk_library_missing_message_4runtime($title, $path) : _cleantalk_library_missing_message_4install($title, $path),
     );
   }
   else {
-    $requirements['cleantalk'] = array(
-      'title' => $t($title),
+    $requirements[$my_module] = array(
+      'title' => $t('CleanTalk PHP-antispam classes'),
       'value' => $t('Installed'),
       'severity' => REQUIREMENT_OK,
     );
   }
 
   return $requirements;
-}
-
-/**
- * Implements hook_enable().
- */
-function cleantalk_enable() {
-  if (!_cleantalk_library_path_ok()) {
-    module_disable(array('cleantalk'));
-    drupal_set_message(_cleantalk_library_missing_message_4install('CleanTalk PHP-antispam classes', 'sites/all/libraries/cleantalk'), 'error');
-  }
 }
 
 /**
@@ -171,7 +149,9 @@ function _cleantalk_library_missing_message_4install($title, $path) {
   return $t('"Antispam by CleanTalk" module is DISABLED due to missing or broken CleanTalk library.') .
     ' <br />' .
     $t(
-      'Please download <a target="_blank" href="@url">@title</a>, extract the archive and copy the contents to the following location:<br /><code>@path</code>.',
+      'Please download <a target="_blank" href="@url">@title</a>,' .
+      ' extract the archive and copy the contents to the following location:' .
+      '<br /><code>@path</code>.',
       array(
         '@url' => 'https://github.com/CleanTalk/php-antispam',
         '@path' => $path,
@@ -179,6 +159,9 @@ function _cleantalk_library_missing_message_4install($title, $path) {
       )
     ) .
     ' <br />' .
-    $t('Make sure 2 files <strong>cleantalk.class.php</strong> and <strong>JSON.php</strong> are located there.') .
+    $t(
+       'Make sure 2 files <strong>cleantalk.class.php</strong> and' .
+       ' <strong>JSON.php</strong> are located there.'
+    ) .
     '<br />';
 }

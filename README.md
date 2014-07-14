@@ -1,1 +1,1 @@
-This is a GitHub clone of this https://drupal.org/node/2117055
+This is a GitHub clone of this https://www.drupal.org/project/cleantalk
